@@ -1,0 +1,221 @@
+---
+title: "hw01_gapminder"
+author: '@RetoSterchi'
+date: "September 15, 2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load data
+
+Let's load the *gapminder* data set for our exploration purposes
+
+```{r load package}
+library("gapminder")
+```
+
+
+## Let's have a look a the data set structure
+Let's have a look a the structure of the dataset
+
+```{r}
+str(gapminder)
+```
+
+We have a data frame with
+
+- 1704 observations and
+- 6 variables:
+    - *country* is a factor with 142 levels
+    - *continent* is a factor with 5 levels
+    - *year* spans the period from 1952 to 2007 in increments of 5 years
+    - *pop* is the population per country and year
+    - *gdpPercap* GDP per capita
+    - *lifeExp* is the life expectancy in years
+
+We can also get at the range of the values by getting a summary of the data set:
+
+```{r }
+summary(gapminder)
+```
+
+See https://www.gapminder.org/data/documentation/ for a in-depth description of the data.
+
+## Let's do some basic data exploration
+
+What countries are categorized as *Oceania*?
+
+```{r }
+unique(gapminder$country[gapminder$continent=="Oceania"])
+```
+
+What is the median life expectancy at birth for the different continents?
+
+```{r }
+require(dplyr)
+gapminder %>%
+    filter(year == 2007) %>%
+    group_by(continent) %>%
+    summarise(lifeExp = median(lifeExp))
+```
+
+What are the ten countries with the lowest or highest life expectancy? Let's only consider the most recent data from the year 2007.
+
+```{r }
+gapminder %>% 
+    filter(year == 2007) %>%
+    mutate(ranking = rank(desc(lifeExp), ties.method = 'first')) %>% 
+    arrange(desc(ranking))
+```
+
+```{r }
+gapminder %>% 
+    filter(year == 2007) %>%
+    mutate(ranking = rank(desc(lifeExp), ties.method = 'first')) %>% 
+    arrange(ranking)
+
+```
+
+
+
+## Let's include a basic plot in our RMarkdown script
+
+RMarkdown allows us to not only include chunks of R code and console output but also graphs. For instance, we could embed a very simple and not very informative plot directly in a RMarkdown file:
+
+```{r plot 1, echo=FALSE}
+plot(lifeExp ~ year, gapminder, type="l")
+```
+
+Note: When the parameter `echo = FALSE` is added to the code chunk the R code that generated the plot will not be printed. This might come in handy when generating a report of an analysis but usually we want to be able to follow the code more easily and might want to include the R code chunk in the printout (i.e., the default echo=TRUE).
+
+## Let's make some more informative plots
+
+First, let's plot the development of life expectancy for every country in the dataset (excluding Oceania which only consists of New Zealand and Australia as we saw earlier). Let's group the plots by continent.
+
+```{r}
+require(ggplot2)
+ggplot(subset(gapminder, continent != "Oceania"),
+       aes(x = year, y = lifeExp, group = country, color = country)) +
+  geom_line(lwd = 1, show.legend = FALSE) + 
+  facet_wrap(~ continent) +
+  scale_color_manual(values = country_colors) +
+  theme(strip.text = element_text(size = rel(1.1)))
+```
+
+Let's have a closer look at the distribution of the life expectancy values for the different continents:
+
+```{r}
+gapminder %>% 
+    filter(year == 2007) %>%
+    ggplot(aes(x = continent, y = lifeExp)) +
+      geom_boxplot() +
+      geom_jitter(position = position_jitter(width = 0.1, height = 0), alpha = 1/4)
+
+```
+
+Which are these countries in Africa with the highest life expectancy between 70 and 80? Let's do the query with dplyr first:
+
+```{r}
+## version using dplyr
+gapminder %>% 
+    filter(year == 2007) %>%
+    filter(continent=="Africa") %>% 
+    mutate(ranking = rank(desc(lifeExp), ties.method = 'first')) %>% 
+    arrange(ranking) %>% 
+    filter(lifeExp > 70)
+
+```
+
+Let's do the same query using base R:
+
+```{r}
+
+## version using base R
+
+q <- gapminder[gapminder$year == 2007 & gapminder$continent == "Africa", ]
+q <- q[rev(order(q$lifeExp)),]
+q <- q[q$lifeExp > 70,]
+q
+
+```
+
+
+Now, let's make a basic plot that shows the world's population between the 1952 and 2007 to see where the biggest increase in population happened.
+
+```{r plot 2}
+gapminder %>% 
+  group_by(year, continent) %>% 
+  summarise(popTotal=sum(as.numeric(pop)) / 1000000000) %>% 
+  ggplot(aes(x=year,y=popTotal,group=continent,fill=continent)) +
+  geom_area() +
+  xlab("Year") +
+  ylab("Population (billions)") +
+  ggtitle("Population") + 
+  scale_fill_discrete(name="Continent")
+```
+
+And finally let's see if we can do something with the life expectancy data. Maybe let's plot it against the GPD per capita of individual countries for the most recent year in the dataset.
+
+```{r}
+gapminder %>%
+  filter(year == 2007) %>% 
+  ggplot(aes(x=gdpPercap, y=lifeExp, group=country, colour=continent)) +
+  geom_point() +
+  xlab("GDP per capita (PPP dollars)") +
+  ylab("Life expectancy (Years)") +
+  ggtitle("Life expectancy vs. Income (2007)") +
+  scale_fill_discrete(name="Continent") +
+  scale_x_log10()
+
+```
+
+Looks like there is some sort of relationship between these two parameters what makes sense if we consider what potentialy influences life expectancy (quality of sanitary facilities, child fatality, access to medical services etc.) 
+
+Let's find the seven countries in Africa with the highest life expectancy again and identify them on the graph. A Google search leads us to the *ggrepel* package that can nicely deal with labels on ggplot graphs. Let's install and load it.
+
+```{r}
+# install.packages("ggrepel")
+require(ggrepel)
+```
+
+We can find many examples of how to use the package describe under  https://cran.r-project.org/web/packages/ggrepel/vignettes/ggrepel.html.
+
+Using the *ggrepel* package let's only add the labels for those seven countries on the top of the graph.
+
+```{r}
+gapminder %>%
+  filter(year == 2007) %>% 
+  ggplot(aes(x=gdpPercap, y=lifeExp, group=country, colour=continent, label=country)) +
+  geom_point() +
+  geom_text_repel(data = subset(gapminder, year == 2007 & country %in% c("Reunion", "Libya", "Tunisia", "Mauritius", "Algeria", "Egypt", "Morocco")),
+                  nudge_y = 90 - subset(gapminder, year == 2007 & country %in% c("Reunion", "Libya", "Tunisia", "Mauritius", "Algeria", "Egypt", "Morocco"))$lifeExp) +
+  xlab("GDP per capita (PPP dollars)") +
+  ylab("Life expectancy (Years)") +
+  ggtitle("Life expectancy vs. Income (2007)") +
+  scale_fill_discrete(name="Continent") +
+  scale_x_log10()
+
+```
+
+That seems to provide further support for our suspected relationship between life expectancy and GDP. However, there are a handful of African countries with similar GDP but way lower life expectancies. Just to round things up, let's add the names of these countries to the plot as well. 
+
+```{r}
+gapminder %>%
+  filter(year == 2007) %>% 
+  ggplot(aes(x=gdpPercap, y=lifeExp, group=country, colour=continent, label=country)) +
+  geom_point() +
+  geom_text_repel(data = subset(gapminder, year == 2007 & country %in% c("Reunion", "Libya", "Tunisia", "Mauritius", "Algeria", "Egypt", "Morocco")),
+                  nudge_y = 90 - subset(gapminder, year == 2007 & country %in% c("Reunion", "Libya", "Tunisia", "Mauritius", "Algeria", "Egypt", "Morocco"))$lifeExp) +
+  geom_text_repel(data = subset(gapminder, year == 2007 & continent == "Africa" & gdpPercap > 9000 & lifeExp < 60),
+                  nudge_x = 14000 - subset(gapminder, year == 2007 & continent == "Africa" & gdpPercap > 9000 & lifeExp < 60)$gdpPercap) +
+  xlab("GDP per capita (PPP dollars)") +
+  ylab("Life expectancy (Years)") +
+  ggtitle("Life expectancy vs. Income (2007)") +
+  scale_fill_discrete(name="Continent") +
+  scale_x_log10()
+
+```
+
