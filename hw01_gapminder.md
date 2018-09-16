@@ -100,9 +100,9 @@ require(dplyr)
 
 ``` r
 gapminder %>%
-    filter(year == 2007) %>%
-    group_by(continent) %>%
-    summarise(lifeExp = median(lifeExp))
+    filter(year == 2007) %>% # only take 2007
+    group_by(continent) %>% # specify the grouping level for the task to come
+    summarise(lifeExp = median(lifeExp)) # calculate the median
 ```
 
     ## # A tibble: 5 x 2
@@ -183,12 +183,11 @@ require(ggplot2)
     ## Warning: package 'ggplot2' was built under R version 3.4.4
 
 ``` r
-ggplot(subset(gapminder, continent != "Oceania"),
-       aes(x = year, y = lifeExp, group = country, color = country)) +
-  geom_line(lwd = 1, show.legend = FALSE) + 
-  facet_wrap(~ continent) +
-  scale_color_manual(values = country_colors) +
-  theme(strip.text = element_text(size = rel(1.1)))
+ggplot(subset(gapminder, continent != "Oceania"), # subset can also be specified within the plot command
+       aes(x = year, y = lifeExp, group = country, color = country)) + # basic aestethics
+  geom_line(lwd = 1, show.legend = FALSE) + # add the lines to the plot
+  facet_wrap(~ continent) + # make four facets
+  scale_color_manual(values = country_colors) # let's use the defined country colors from the package
 ```
 
 ![](hw01_gapminder_files/figure-markdown_github/unnamed-chunk-7-1.png)
@@ -199,8 +198,8 @@ Let's have a closer look at the distribution of the life expectancy values for t
 gapminder %>% 
     filter(year == 2007) %>%
     ggplot(aes(x = continent, y = lifeExp)) +
-      geom_boxplot() +
-      geom_jitter(position = position_jitter(width = 0.1, height = 0), alpha = 1/4)
+      geom_boxplot() + # let's make a boxplot
+      geom_jitter(position = position_jitter(width = 0.1, height = 0), alpha = 1/4) # adds some jitter around the continent
 ```
 
 ![](hw01_gapminder_files/figure-markdown_github/unnamed-chunk-8-1.png)
@@ -256,12 +255,12 @@ Now, let's make a basic plot that shows the world's population between the 1952 
 gapminder %>% 
   group_by(year, continent) %>% 
   summarise(popTotal=sum(as.numeric(pop)) / 1000000000) %>% 
-  ggplot(aes(x=year,y=popTotal,group=continent,fill=continent)) +
-  geom_area() +
-  xlab("Year") +
-  ylab("Population (billions)") +
-  ggtitle("Population") + 
-  scale_fill_discrete(name="Continent")
+  ggplot(aes(x=year, y=popTotal, group=continent, fill=continent)) +
+  geom_area() + # use the filled area style
+  xlab("Year") + # specify label for x-axis
+  ylab("Population (billions)") + # specify label for y-axis
+  ggtitle("Population") + # Choose a nice plot title
+  scale_fill_discrete(name="Continent") # Change the title of the legend
 ```
 
 ![](hw01_gapminder_files/figure-markdown_github/plot%202-1.png)
@@ -277,7 +276,7 @@ gapminder %>%
   ylab("Life expectancy (Years)") +
   ggtitle("Life expectancy vs. Income (2007)") +
   scale_fill_discrete(name="Continent") +
-  scale_x_log10()
+  scale_x_log10() # use a log scale
 ```
 
 ![](hw01_gapminder_files/figure-markdown_github/unnamed-chunk-11-1.png)
@@ -305,7 +304,7 @@ gapminder %>%
   ggplot(aes(x=gdpPercap, y=lifeExp, group=country, colour=continent, label=country)) +
   geom_point() +
   geom_text_repel(data = subset(gapminder, year == 2007 & country %in% c("Reunion", "Libya", "Tunisia", "Mauritius", "Algeria", "Egypt", "Morocco")),
-                  nudge_y = 90 - subset(gapminder, year == 2007 & country %in% c("Reunion", "Libya", "Tunisia", "Mauritius", "Algeria", "Egypt", "Morocco"))$lifeExp) +
+                  nudge_y = 90 - subset(gapminder, year == 2007 & country %in% c("Reunion", "Libya", "Tunisia", "Mauritius", "Algeria", "Egypt", "Morocco"))$lifeExp) + # this alignes the labels on the top
   xlab("GDP per capita (PPP dollars)") +
   ylab("Life expectancy (Years)") +
   ggtitle("Life expectancy vs. Income (2007)") +
@@ -323,9 +322,9 @@ gapminder %>%
   ggplot(aes(x=gdpPercap, y=lifeExp, group=country, colour=continent, label=country)) +
   geom_point() +
   geom_text_repel(data = subset(gapminder, year == 2007 & country %in% c("Reunion", "Libya", "Tunisia", "Mauritius", "Algeria", "Egypt", "Morocco")),
-                  nudge_y = 90 - subset(gapminder, year == 2007 & country %in% c("Reunion", "Libya", "Tunisia", "Mauritius", "Algeria", "Egypt", "Morocco"))$lifeExp) +
+                  nudge_y = 90 - subset(gapminder, year == 2007 & country %in% c("Reunion", "Libya", "Tunisia", "Mauritius", "Algeria", "Egypt", "Morocco"))$lifeExp) + # this alignes the labels on the top
   geom_text_repel(data = subset(gapminder, year == 2007 & continent == "Africa" & gdpPercap > 9000 & lifeExp < 60),
-                  nudge_x = 14000 - subset(gapminder, year == 2007 & continent == "Africa" & gdpPercap > 9000 & lifeExp < 60)$gdpPercap) +
+                  nudge_x = 14000 - subset(gapminder, year == 2007 & continent == "Africa" & gdpPercap > 9000 & lifeExp < 60)$gdpPercap) + # this alignes the labels on the right
   xlab("GDP per capita (PPP dollars)") +
   ylab("Life expectancy (Years)") +
   ggtitle("Life expectancy vs. Income (2007)") +
